@@ -19,6 +19,6 @@ public class Program
     }
 
     private static ServiceProvider SetupDI() => new ServiceCollection()
-            .AddSingleton<ICrawlerService, AltCrawlerService>()
+            .AddSingleton<ICrawlerService, CrawlerService>()
             .BuildServiceProvider();
 }

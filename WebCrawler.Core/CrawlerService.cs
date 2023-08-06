@@ -37,11 +37,15 @@ public class CrawlerService : ICrawlerService
             var links = HttpHelpers.GetLinksFromUrl(url);
             _visited.TryAdd(url, 0);
 
+            if (_results.TryGetValue(id, out CrawlerResult result))
+                result.VisitedCount++;
+
             await Task.Run(() => Parallel.ForEach(links, async link => await Process(id, link, currentDepth, maxDepth)));
         }
         catch (Exception)
         {
-            _failed++;
+            if (_results.TryGetValue(id, out CrawlerResult result))
+                result.FailedCount++;
         }
     }
 }
