@@ -1,37 +1,24 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using Microsoft.Extensions.DependencyInjection;
 using WebCrawler.Core;
+using WebCrawler.Core.Interfaces;
+using WebCrawlerApp;
 
-var service = new CrawlerService();
-
-Console.WriteLine("CrawlerService started");
-
-Console.WriteLine("Enter Crawling Depth (Default is 1)");
-
-if(!int.TryParse(Console.ReadLine(), out int depth))
-    depth = 1;
-
-Console.WriteLine($"Depth set to {depth}");
-
-Console.WriteLine();
-
-while (true)
+public class Program
 {
-    await Start();
-    Console.WriteLine();
-}
+    public static async Task Main(string[] args)
+    {
+        //setup our DI
+        var serviceProvider = SetupDI();
 
-async Task Start()
-{
-    Console.WriteLine("Enter url");
+        var crawlerService = serviceProvider.GetService<ICrawlerService>();
 
-    var url = Console.ReadLine();
+        if (crawlerService == null)
+            throw new ArgumentNullException(nameof(crawlerService));
 
-    if (string.IsNullOrEmpty(url))
-        return;
+        await App.Start(crawlerService);
+    }
 
-    Console.WriteLine("Crawling in progress...");
-
-    var result = await service.Index(url, depth);
-
-    Console.WriteLine($"{result.VisitedCount} sites visited and {result.FailedCount} failed");
+    private static ServiceProvider SetupDI() => new ServiceCollection()
+            .AddSingleton<ICrawlerService, CrawlerService>()
+            .BuildServiceProvider();
 }

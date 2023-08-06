@@ -1,13 +1,13 @@
 ﻿using HtmlAgilityPack;
 using System.Collections.Concurrent;
+using WebCrawler.Core.Interfaces;
 using WebCrawler.Core.Models;
 
 namespace WebCrawler.Core;
 
-public class CrawlerService
+public class CrawlerService : ICrawlerService
 {
     private ConcurrentDictionary<string, byte> _visited = new();
-
     private int _failed = 0;
 
     public async Task<CrawlerResult> Index(string url, int depth)
