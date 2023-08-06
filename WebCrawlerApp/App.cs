@@ -1,4 +1,5 @@
 ﻿using WebCrawler.Core.Interfaces;
+using WebCrawler.Core.Models;
 
 namespace WebCrawlerApp;
 
@@ -17,41 +18,60 @@ internal static class App
     {
         Console.WriteLine("CrawlerService started");
 
-        var depth = GetDepth();
-
+        var settings = new CrawlerSettings
+        {
+            MaxDepth = GetMaxDepthSetting(),
+            OnlySameOrigin = GetOnlySameOriginSetting()
+        };
         Console.WriteLine();
 
         while (true)
         {
-            await CrawlUrl(depth);
+            await CrawlUrl(settings);
             Console.WriteLine();
         }
     }
 
-    private static int GetDepth()
+    private static bool GetOnlySameOriginSetting()
     {
-        Console.WriteLine("Enter Crawling Depth (Default is 1)");
+        Console.WriteLine("Enter Crawling Same Origin Only (Y/N) [Default is N]");
+
+        var yn = Console.ReadLine()?.ToUpper()?.FirstOrDefault();
+
+        var onlySameOrigin = yn == 'Y';
+        
+        if (onlySameOrigin)
+            Console.WriteLine("OnlySameOrigin is Enabled");
+        else
+            Console.WriteLine("OnlySameOrigin is Disabled");
+
+        return onlySameOrigin;
+    }
+
+    private static int GetMaxDepthSetting()
+    {
+        Console.WriteLine("Enter Crawling Max Depth [Default is 1]");
 
         if (!int.TryParse(Console.ReadLine(), out int depth))
             depth = 1;
 
-        Console.WriteLine($"Depth set to {depth}");
+        Console.WriteLine($"Max Depth set to {depth}");
 
         return depth;
     }
 
-    private static async Task CrawlUrl(int depth)
+    private static async Task CrawlUrl(CrawlerSettings settings)
     {
         Console.WriteLine("Enter url");
 
-        var url = Console.ReadLine();
+        settings.Url = Console.ReadLine();
 
-        if (string.IsNullOrEmpty(url))
+        if (string.IsNullOrEmpty(settings.Url))
             return;
 
         Console.WriteLine("Crawling in progress...");
 
-        var result = await _crawlerService.Index(url, depth);
+        var result = await _crawlerService.Index(settings);
 
         Console.WriteLine($"{result.VisitedCount} sites visited and {result.FailedCount} failed");
     }

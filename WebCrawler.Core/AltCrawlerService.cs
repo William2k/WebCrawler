@@ -9,7 +9,7 @@ public class AltCrawlerService : ICrawlerService
     private ConcurrentDictionary<string, byte> _visited = new();
     private ConcurrentDictionary<Guid, CrawlerResult> _results = new();
 
-    public async Task<CrawlerResult> Index(string url, int depth)
+    public async Task<CrawlerResult> Index(CrawlerSettings settings)
     {
         var id = Guid.NewGuid();
         var result = new CrawlerResult
@@ -20,24 +20,24 @@ public class AltCrawlerService : ICrawlerService
 
        _results.TryAdd(id, result);
 
-        await StartCrawling(id, url, depth);
+        await StartCrawling(id, settings);
 
         return result;
     }
 
-    private async Task StartCrawling(Guid id, string url, int depth)
+    private async Task StartCrawling(Guid id, CrawlerSettings settings)
     {
         var currentDepth = 0;
         var sites = new List<string>
         {
-            url
+            settings.Url
         };
 
-        while (++currentDepth <= depth && sites.Any())
+        while (++currentDepth <= settings.MaxDepth && sites.Any())
         {
             var linksFound = new ConcurrentBag<string>();
 
-            var actions = sites.Select(s => new Action(() => Process(id, s, ref linksFound)));
+            var actions = sites.Select(s => new Action(() => Process(id, s, settings, ref linksFound)));
 
             await Task.Run(() => Parallel.Invoke(actions.ToArray()));
 
@@ -46,7 +46,7 @@ public class AltCrawlerService : ICrawlerService
     }
 
 
-    private void Process(Guid id, string url, ref ConcurrentBag<string> linksFound)
+    private void Process(Guid id, string url, CrawlerSettings settings, ref ConcurrentBag<string> linksFound)
     {
         url = url.ToLowerInvariant().Trim();
 
@@ -55,7 +55,7 @@ public class AltCrawlerService : ICrawlerService
 
         try
         {
-            var links = HttpHelpers.GetLinksFromUrl(url);
+            var links = HttpHelpers.GetLinksFromUrl(url, settings.OnlySameOrigin);
             _visited.TryAdd(url, 0);
 
             if(_results.TryGetValue(id, out CrawlerResult result))

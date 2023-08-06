@@ -4,6 +4,6 @@ namespace WebCrawler.Core.Interfaces
 {
     public interface ICrawlerService
     {
-        Task<CrawlerResult> Index(string url, int depth);
+        Task<CrawlerResult> Index(CrawlerSettings settings);
     }
 }
