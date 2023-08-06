@@ -1,5 +1,4 @@
-﻿using HtmlAgilityPack;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using WebCrawler.Core.Interfaces;
 using WebCrawler.Core.Models;
 
@@ -8,61 +7,41 @@ namespace WebCrawler.Core;
 public class CrawlerService : ICrawlerService
 {
     private ConcurrentDictionary<string, byte> _visited = new();
-    private int _failed = 0;
+    private ConcurrentDictionary<Guid, CrawlerResult> _results = new();
 
     public async Task<CrawlerResult> Index(string url, int depth)
     {
-        await Process(url, 0, depth);
-
-        return new CrawlerResult
+        var id = Guid.NewGuid();
+        var result = new CrawlerResult
         {
-            VisitedCount = _visited.Count,
-            FailedCount = _failed
+            VisitedCount = 0,
+            FailedCount = 0
         };
+
+        _results.TryAdd(id, result);
+
+        await Process(id, url, 0, depth);
+
+        return result;
     }
 
-    private async Task Process(string url, int currentDepth, int maxDepth)
+    private async Task Process(Guid id, string url, int currentDepth, int maxDepth)
     {
         url = url.ToLowerInvariant().Trim();
 
         if (_visited.ContainsKey(url) || ++currentDepth > maxDepth)
             return;
 
-        var links = GetLinks(url);
-        _visited.TryAdd(url, 0);
-
-        await Task.Run(() => Parallel.ForEach(links, async link => await Process(link, currentDepth, maxDepth)));
-    }
-
-    private IEnumerable<string> GetLinks(string url)
-    {
         try
         {
-            var doc = new HtmlWeb().Load(url);
+            var links = HttpHelpers.GetLinksFromUrl(url);
+            _visited.TryAdd(url, 0);
 
-            var linkedPages = doc.DocumentNode.SelectNodes("//a[@href]")
-                .Select(a => a.GetAttributeValue("href", null))
-                .Where(u => !string.IsNullOrEmpty(u)).ToList();
-
-            var uri = new Uri(url);
-            var baseUri = uri.GetLeftPart(UriPartial.Authority);
-
-            for (int i = 0; i < linkedPages.Count; i++)
-            {
-                var current = linkedPages[i];
-
-                if (current == null || !current.StartsWith("/")) continue;
-
-                linkedPages[i] = baseUri + current;
-            }
-
-            return linkedPages;
+            await Task.Run(() => Parallel.ForEach(links, async link => await Process(id, link, currentDepth, maxDepth)));
         }
         catch (Exception)
         {
             _failed++;
-
-            return Array.Empty<string>();
         }
     }
 }
